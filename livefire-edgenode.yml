@@ -1,0 +1,70 @@
+#
+- hosts: 127.0.0.1
+  connection: local
+  become: yes
+  vars_files:
+    - livefire_vars.yml
+  tasks:
+    - name: Create edge vDS via PowerCLI
+      command: pwsh ./new_vds.ps1
+
+    - name: Collect trunk1 port group  Network id
+      command: sudo pwsh ./get_key_trunk1.ps1
+      register: trunk1
+
+    - name: Collect trunk2 port group  Network id
+      command: sudo pwsh ./get_key_trunk2.ps1
+      register: trunk2
+
+    - name: Create VLAN logical switches for Edge Nodes at Site B
+      nsxt_logical_switches:
+        hostname: "{{ nsx_node1.mgmt_ip }}"
+        username: "{{ nsx_username }}"
+        password: "{{ nsx_password }}"
+        validate_certs: "{{ validate_certs }}"
+        display_name: "{{ item.display_name }}"
+        replication_mode: SOURCE
+        admin_state: UP
+        transport_zone_name: "{{ item.transport_zone_name }}"
+        uplink_teaming_policy_name: "{{ item.uplink_teaming_policy_name }}"
+        vlan: "{{ item.vlan }}"
+        state: "{{ state }}"
+      with_items:
+        - "{{ logical_switches }}"
+      register: logical_switches_info
+
+    - name: Create Transport Nodes
+      nsxt_transport_nodes:
+        hostname: "{{ nsx_node1.mgmt_ip }}"
+        username: "{{ nsx_username }}"
+        password: "{{ nsx_password }}"
+        validate_certs: "{{ validate_certs }}"
+        display_name: "{{ item.display_name }}"
+        host_switch_spec:
+          resource_type: StandardHostSwitchSpec
+          host_switches: "{{ item.host_switches }}"
+        transport_zone_endpoints: "{{ item.transport_zone_endpoints }}"
+        node_deployment_info: "{{ item.node_deployment_info }}"
+        state: "{{ state }}"
+      with_items:
+        - "{{ transport_nodes }}"
+ 
+    - name: Add edge cluster
+      nsxt_edge_clusters:
+        hostname: "{{ nsx_node1.mgmt_ip }}"
+        username: "{{ nsx_username }}"
+        password: "{{ nsx_password }}"
+        validate_certs: "{{ validate_certs }}"
+        display_name: "{{ item.display_name }}"
+        cluster_profile_bindings:
+        - profile_id: "{{ item.cluster_profile_binding_id }}"
+        members: "{{ item.members }}"
+        state: "{{ state }}"
+      with_items:
+        - "{{ edge_clusters }}"
+
+    - name: Migrate edges to NVDS and remove memory and cpu reservations
+      command: pwsh  migrate_siteb_edgevm_to_opaque_networks.ps1
+
+
+

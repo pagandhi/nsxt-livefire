@@ -124,6 +124,21 @@
     },
   ],  
 
+ "logical_switches_webapp": [
+    { "display_name": "VL-WEB",
+      "transport_zone_name": "VLAN-SITEA-TZ",
+      "vlan": 10
+    },
+    { "display_name": "VL-APP",
+      "transport_zone_name": "VLAN-SITEA-TZ",
+      "vlan": 20
+    },
+    { "display_name": "VL-DB",
+      "transport_zone_name": "VLAN-SITEA-TZ",
+      "vlan": 30
+    }
+  ],
+
   "ip_pools": [
     {
       "display_name": "TEP-SITEA-IP-POOL",
